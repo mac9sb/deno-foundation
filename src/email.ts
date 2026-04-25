@@ -1,11 +1,17 @@
+/** Parameters for {@linkcode sendEmail}. */
 export interface EmailPayload {
   to: string;
   subject: string;
   html: string;
   text: string;
+  /** Override `globalThis.fetch` (useful in tests). */
   fetch?: typeof globalThis.fetch;
 }
 
+/**
+ * Sends a transactional email via the Resend API.
+ * Requires the `RESEND_API_KEY` environment variable.
+ */
 export async function sendEmail(payload: EmailPayload): Promise<void> {
   const apiKey = Deno.env.get("RESEND_API_KEY");
   if (!apiKey) throw new Error("RESEND_API_KEY is not set");

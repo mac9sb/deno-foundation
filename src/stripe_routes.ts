@@ -13,18 +13,29 @@ import type { Router } from "./router.ts";
 import type { User } from "./schemas.ts";
 import { keys } from "./kv.ts";
 
+/** Options for {@linkcode mountStripeRoutes}. */
 export interface StripeRoutesOptions {
+  /** Full origin URL used to build redirect URLs. */
   baseUrl: string;
-  /** Path to redirect to after successful checkout. Default: "/auth/success" */
+  /** Path to redirect to after successful checkout. Default: `/auth/success`. */
   successPath?: string;
-  /** Path to redirect to if checkout is cancelled. Default: "/get-started" */
+  /** Path to redirect to if checkout is cancelled. Default: `/get-started`. */
   cancelPath?: string;
-  /** Overrides STRIPE_SECRET_KEY env var. */
+  /** Override `STRIPE_SECRET_KEY` env var. */
   secretKey?: string;
-  /** Overrides STRIPE_WEBHOOK_SECRET env var. */
+  /** Override `STRIPE_WEBHOOK_SECRET` env var. */
   webhookSecret?: string;
 }
 
+/**
+ * Mounts Stripe billing routes onto `router`.
+ *
+ * Routes registered:
+ * - `GET  /api/subscription` — returns current subscription status (auth required)
+ * - `POST /billing/checkout` — creates a Checkout session (auth required, body: `{ priceId }`)
+ * - `POST /billing/portal` — creates a Billing Portal session (auth required)
+ * - `POST /billing/webhook` — handles verified Stripe webhook events
+ */
 export function mountStripeRoutes(
   router: Router,
   kv: Deno.Kv,

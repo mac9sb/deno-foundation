@@ -3,6 +3,7 @@ type Handler = (
   params: Record<string, string>,
 ) => Response | Promise<Response>;
 
+/** HTTP method handlers for a single route. */
 export interface RouteDefinition {
   get?: Handler;
   post?: Handler;
@@ -16,14 +17,25 @@ interface Route {
   definition: RouteDefinition;
 }
 
+/**
+ * A minimal URL-pattern router.
+ *
+ * ```ts
+ * const router = new Router();
+ * router.route("/users/:id", { get: (req, { id }) => new Response(id) });
+ * Deno.serve((req) => router.handle(req));
+ * ```
+ */
 export class Router {
   private routes: Route[] = [];
 
+  /** Registers a route for the given pathname pattern. */
   route(pathname: string, definition: RouteDefinition): this {
     this.routes.push({ pattern: new URLPattern({ pathname }), definition });
     return this;
   }
 
+  /** Dispatches `request` to the first matching route handler. */
   async handle(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
@@ -61,6 +73,7 @@ export class Router {
   }
 }
 
+/** Serialises `data` as JSON and returns a `Response` with the given status. */
 export function jsonResponse(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
@@ -68,6 +81,7 @@ export function jsonResponse(data: unknown, status = 200): Response {
   });
 }
 
+/** Returns a JSON error response with `{ error: message }` and the given status. */
 export function errorResponse(message: string, status: number): Response {
   return jsonResponse({ error: message }, status);
 }

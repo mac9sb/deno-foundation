@@ -3,16 +3,26 @@ interface RateLimitEntry {
   windowStart: number;
 }
 
+/** Options for {@linkcode enforce}. */
 export interface RateLimitOptions {
+  /** Maximum number of requests allowed per window. Default: 5. */
   limit?: number;
+  /** Length of the sliding window in milliseconds. Default: 10 minutes. */
   windowMs?: number;
 }
 
+/** Return value of {@linkcode enforce}. */
 export interface RateLimitResult {
+  /** `true` if the request is within the limit. */
   ok: boolean;
+  /** Seconds until the window resets, present when `ok` is `false`. */
   retryAfter?: number;
 }
 
+/**
+ * Increments the request counter for `key` in KV and returns whether the
+ * request is within the configured rate limit.
+ */
 export async function enforce(
   kv: Deno.Kv,
   key: Deno.KvKey,

@@ -1,7 +1,9 @@
+/** Returns a new random UUID v4 token. */
 export function randomToken(): string {
   return crypto.randomUUID();
 }
 
+/** Returns the SHA-256 hex digest of the given string. */
 export async function sha256Hex(input: string): Promise<string> {
   const encoded = new TextEncoder().encode(input);
   const hash = await crypto.subtle.digest("SHA-256", encoded);
@@ -10,6 +12,7 @@ export async function sha256Hex(input: string): Promise<string> {
     .join("");
 }
 
+/** Compares two strings in constant time to prevent timing attacks. */
 export function constantTimeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let result = 0;

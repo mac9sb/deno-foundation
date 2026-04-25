@@ -6,17 +6,28 @@ import { sendEmail } from "./email.ts";
 
 const TOKEN_TTL_MS = 15 * 60 * 1000;
 
+/** Options for {@linkcode sendMagicLink}. */
 export interface MagicLinkOptions {
+  /** Base URL used to build the verification link sent in the email. */
   baseUrl: string;
+  /** Override `globalThis.fetch` (useful in tests). */
   fetch?: typeof globalThis.fetch;
+  /** Pass `false` to skip rate limiting (useful in tests). */
   rateLimit?: false;
 }
 
+/** Return value of {@linkcode sendMagicLink}. */
 export interface SendMagicLinkResult {
+  /** `true` if the email was sent; `false` if rate-limited. */
   ok: boolean;
+  /** Seconds until the rate-limit window resets, present when `ok` is `false`. */
   retryAfter?: number;
 }
 
+/**
+ * Generates a one-time magic-link token, stores its hash in KV, and emails
+ * the sign-in link to the user. Enforces a rate limit by default.
+ */
 export async function sendMagicLink(
   kv: Deno.Kv,
   email: string,
@@ -52,6 +63,11 @@ export async function sendMagicLink(
   return { ok: true };
 }
 
+/**
+ * Verifies a raw magic-link token and marks it as used.
+ * Returns the associated email address, or `null` if the token is unknown,
+ * already used, or expired.
+ */
 export async function verifyMagicToken(
   kv: Deno.Kv,
   rawToken: string,

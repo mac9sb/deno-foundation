@@ -41,6 +41,7 @@ function getMinLevel(): Level {
     : "info";
 }
 
+/** Structured JSON logger. Level is controlled by the `LOG_LEVEL` env var. */
 export interface Logger {
   trace(msg: string, data?: Record<string, unknown>): void;
   debug(msg: string, data?: Record<string, unknown>): void;
@@ -49,6 +50,17 @@ export interface Logger {
   error(msg: string, data?: Record<string, unknown>): void;
 }
 
+/**
+ * Creates a named JSON logger that writes to stdout (or stderr for warn/error).
+ * Sensitive fields such as `token`, `session_id`, and `cookie` are redacted
+ * automatically. The minimum level defaults to `info` and can be overridden
+ * with the `LOG_LEVEL` environment variable.
+ *
+ * ```ts
+ * const log = createLogger("app");
+ * log.info("server starting", { port: 8000 });
+ * ```
+ */
 export function createLogger(name: string): Logger {
   function log(
     level: Level,

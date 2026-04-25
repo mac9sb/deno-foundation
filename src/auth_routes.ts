@@ -20,15 +20,35 @@ import { keys } from "./kv.ts";
 
 const log = createLogger("auth");
 
+/** Options for {@linkcode mountAuthRoutes}. */
 export interface AuthRoutesOptions {
+  /** Full origin URL, e.g. `https://example.com`. */
   baseUrl: string;
+  /** WebAuthn relying-party ID, typically the hostname. */
   rpId: string;
+  /** Human-readable name shown to users during passkey registration. */
   rpName: string;
+  /** Path to redirect to after sign-in. Default: `/auth/success`. */
   successPath?: string;
+  /** Path to redirect to after sign-out. Default: `/get-started`. */
   signInPath?: string;
+  /** Path to redirect to when a magic link has expired. Default: `/link-expired`. */
   expiredPath?: string;
 }
 
+/**
+ * Mounts all authentication routes onto `router`.
+ *
+ * Routes registered:
+ * - `GET  /api/session` — returns current session user or 401
+ * - `POST /auth/magic-link` — sends a one-time sign-in email
+ * - `GET  /auth/verify` — verifies a magic-link token and creates a session
+ * - `POST /auth/passkey/register/begin` — starts WebAuthn registration
+ * - `POST /auth/passkey/register/finish` — completes WebAuthn registration
+ * - `POST /auth/passkey/login/begin` — starts WebAuthn authentication
+ * - `POST /auth/passkey/login/finish` — completes WebAuthn authentication
+ * - `POST /auth/logout` — revokes the session and clears the cookie
+ */
 export function mountAuthRoutes(
   router: Router,
   kv: Deno.Kv,

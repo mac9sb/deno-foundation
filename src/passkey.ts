@@ -22,6 +22,7 @@ export type {
   RegistrationResponseJSON,
 };
 
+/** Options for {@linkcode beginRegistration}. */
 export interface RegistrationBeginOptions {
   rpName: string;
   rpId: string;
@@ -30,21 +31,34 @@ export interface RegistrationBeginOptions {
   userName?: string;
 }
 
+/** Options for {@linkcode beginAuthentication}. */
 export interface AuthenticationBeginOptions {
   rpId: string;
+  /** When provided, only credentials belonging to this user are offered. */
   userId?: string;
 }
 
+/** Return value of {@linkcode beginRegistration}. */
 export interface RegistrationBeginResult {
+  /** WebAuthn creation options to pass to `navigator.credentials.create`. */
   options: PublicKeyCredentialCreationOptionsJSON;
+  /** Opaque ID that must be passed back to {@linkcode finishRegistration}. */
   challengeId: string;
 }
 
+/** Return value of {@linkcode beginAuthentication}. */
 export interface AuthenticationBeginResult {
+  /** WebAuthn request options to pass to `navigator.credentials.get`. */
   options: PublicKeyCredentialRequestOptionsJSON;
+  /** Opaque ID that must be passed back to {@linkcode finishAuthentication}. */
   challengeId: string;
 }
 
+/**
+ * Generates WebAuthn registration options and stores the challenge in KV.
+ * Pass the returned `options` to `navigator.credentials.create` on the client
+ * and the `challengeId` back to {@linkcode finishRegistration}.
+ */
 export async function beginRegistration(
   kv: Deno.Kv,
   opts: RegistrationBeginOptions,
@@ -79,6 +93,10 @@ export async function beginRegistration(
   return { options, challengeId };
 }
 
+/**
+ * Verifies the WebAuthn registration response from the client, stores the new
+ * credential in KV, and returns the stored {@linkcode PasskeyCredential}.
+ */
 export async function finishRegistration(
   kv: Deno.Kv,
   userId: string,
@@ -123,6 +141,11 @@ export async function finishRegistration(
   return passkeyCredential;
 }
 
+/**
+ * Generates WebAuthn authentication options and stores the challenge in KV.
+ * Pass the returned `options` to `navigator.credentials.get` on the client
+ * and the `challengeId` back to {@linkcode finishAuthentication}.
+ */
 export async function beginAuthentication(
   kv: Deno.Kv,
   opts: AuthenticationBeginOptions,
@@ -156,6 +179,10 @@ export async function beginAuthentication(
   return { options, challengeId };
 }
 
+/**
+ * Verifies the WebAuthn authentication response from the client, updates the
+ * stored credential counter, and returns the authenticated user ID.
+ */
 export async function finishAuthentication(
   kv: Deno.Kv,
   challengeId: string,

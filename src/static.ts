@@ -11,26 +11,29 @@ const MIME: Record<string, string> = {
   ttf: "font/ttf",
 };
 
+/** Options for {@linkcode createStaticHandler}. */
 export interface StaticHandlerOptions {
-  /** Directory to serve files from. Default: "./public" */
+  /** Directory to serve files from. Default: `"./public"`. */
   dir?: string;
   /** Locale codes to detect from cookie and Accept-Language header. */
   locales?: string[];
 }
 
+/** A static-file handler returned by {@linkcode createStaticHandler}. */
 export interface StaticHandler {
-  /** True if the pathname ends with a known static file extension. */
+  /** Returns `true` if the pathname ends with a known static file extension. */
   isStatic(pathname: string): boolean;
-  /** Serve a static file. Returns 404 if not found or path traversal detected. */
+  /** Serves a static file. Returns 404 if not found or path traversal is detected. */
   file(pathname: string): Promise<Response>;
-  /** Serve an HTML file, setting a locale cookie on first visit. */
+  /** Serves an HTML file, setting a locale cookie on first visit. */
   html(req: Request, pathname: string): Promise<Response>;
 }
 
 /**
- * Detect the best locale from a request.
+ * Detects the best locale for a request.
  *
  * Priority: locale cookie → Accept-Language header → first supported locale.
+ * Returns `"en"` if `supported` is empty.
  */
 export function detectLocale(req: Request, supported: string[]): string {
   if (supported.length === 0) return "en";
@@ -50,6 +53,22 @@ export function detectLocale(req: Request, supported: string[]): string {
   return supported[0];
 }
 
+/**
+ * Creates a static-file handler that serves files from `dir`.
+ *
+ * - Path traversal attempts (`..`) are rejected with 404.
+ * - When `locales` is set, an HTML response sets a `locale` cookie on first
+ *   visit using the detected locale from the request.
+ *
+ * ```ts
+ * const serve = createStaticHandler({ locales: ["en", "fr"] });
+ * Deno.serve((req) => {
+ *   const { pathname } = new URL(req.url);
+ *   if (serve.isStatic(pathname)) return serve.file(pathname);
+ *   return serve.html(req, "/index.html");
+ * });
+ * ```
+ */
 export function createStaticHandler(
   opts: StaticHandlerOptions = {},
 ): StaticHandler {

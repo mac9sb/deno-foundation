@@ -1,3 +1,7 @@
+/**
+ * Validates the `Origin` header against the expected origin.
+ * Returns `null` if the origin matches, or a 403 `Response` if it does not.
+ */
 export function checkOrigin(
   request: Request,
   expectedOrigin: string,

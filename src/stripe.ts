@@ -4,19 +4,29 @@ import type { StripeCustomer, StripeSubscription } from "./schemas.ts";
 
 const API = "https://api.stripe.com/v1";
 
+/** Common Stripe API options shared by most functions. */
 export interface StripeOptions {
+  /** Override `STRIPE_SECRET_KEY` env var. */
   secretKey?: string;
+  /** Override `globalThis.fetch` (useful in tests). */
   fetch?: typeof globalThis.fetch;
 }
 
+/** Options for {@linkcode createCheckoutSession}. */
 export interface CheckoutOptions extends StripeOptions {
+  /** Stripe price ID for the subscription plan. */
   priceId: string;
+  /** URL to redirect to after a successful checkout. */
   successUrl: string;
+  /** URL to redirect to if the customer cancels checkout. */
   cancelUrl: string;
+  /** Number of free trial days to apply to the subscription. */
   trialDays?: number;
 }
 
+/** Options for {@linkcode createPortalSession}. */
 export interface PortalOptions extends StripeOptions {
+  /** URL to return the customer to after the portal session. */
   returnUrl: string;
 }
 
@@ -47,6 +57,10 @@ function post(
   });
 }
 
+/**
+ * Returns the existing Stripe customer for `userId`, or creates one via the
+ * Stripe API and stores it under both the user ID and Stripe customer ID keys.
+ */
 export async function createOrGetCustomer(
   kv: Deno.Kv,
   userId: string,
@@ -84,6 +98,11 @@ export async function createOrGetCustomer(
   return customer;
 }
 
+/**
+ * Creates a Stripe Checkout session for a subscription purchase.
+ * Sets `metadata.userId` on both the session and the subscription so that
+ * webhook events can always resolve the application user.
+ */
 export async function createCheckoutSession(
   kv: Deno.Kv,
   userId: string,
@@ -100,7 +119,6 @@ export async function createCheckoutSession(
     "line_items[0][quantity]": "1",
     success_url: opts.successUrl,
     cancel_url: opts.cancelUrl,
-    // Set on both session and subscription so webhooks always have userId
     "metadata[userId]": userId,
     "subscription_data[metadata][userId]": userId,
   });
@@ -119,6 +137,10 @@ export async function createCheckoutSession(
   return { url: data.url, sessionId: data.id };
 }
 
+/**
+ * Creates a Stripe Billing Portal session so the customer can manage their
+ * subscription. Throws if no Stripe customer exists for `userId`.
+ */
 export async function createPortalSession(
   kv: Deno.Kv,
   userId: string,
@@ -146,6 +168,10 @@ export async function createPortalSession(
   return { url: data.url };
 }
 
+/**
+ * Verifies a Stripe webhook signature using HMAC-SHA256.
+ * Returns `true` if the signature is valid, `false` otherwise.
+ */
 export async function verifyWebhook(
   payload: string,
   signature: string,
@@ -178,6 +204,12 @@ export async function verifyWebhook(
   return constantTimeEqual(computed, parts.v1);
 }
 
+/**
+ * Handles a verified Stripe webhook event, updating KV with customer and
+ * subscription data. Handles `checkout.session.completed`,
+ * `customer.subscription.created`, `customer.subscription.updated`, and
+ * `customer.subscription.deleted`.
+ */
 export async function handleWebhookEvent(
   kv: Deno.Kv,
   event: StripeEvent,
@@ -227,6 +259,7 @@ export async function handleWebhookEvent(
   await kv.set(keys.stripe.subscriptionByUser(userId), subscription);
 }
 
+/** Returns the current subscription for `userId`, or `null` if none exists. */
 export async function getSubscription(
   kv: Deno.Kv,
   userId: string,
@@ -236,6 +269,7 @@ export async function getSubscription(
   )).value;
 }
 
+/** Returns `true` if `sub` has an `active` or `trialing` status. */
 export function isActiveSubscription(sub: StripeSubscription | null): boolean {
   if (!sub) return false;
   return sub.status === "active" || sub.status === "trialing";
