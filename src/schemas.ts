@@ -23,3 +23,20 @@ export type PasskeyCredential = {
   counter: number;
   transports?: string[];
 };
+
+export type StripeCustomer = {
+  stripeId: string;
+  userId: string;
+  email: string;
+  createdAt: number;
+};
+
+export type StripeSubscription = {
+  subscriptionId: string;
+  customerId: string;
+  status: string;
+  priceId: string;
+  currentPeriodEnd: number;
+  cancelAtPeriodEnd: boolean;
+  updatedAt: number;
+};

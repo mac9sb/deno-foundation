@@ -1,4 +1,10 @@
 {
+  "name": "@mac9sb/deno-foundation",
+  "version": "0.1.2",
+  "exports": "./src/mod.ts",
+  "publish": {
+    "include": ["src/", "README.md"]
+  },
   "tasks": {
     "test": "deno test --allow-read --allow-write --allow-env --allow-net --unstable-kv tests/",
     "lint": "deno lint src/ tests/",

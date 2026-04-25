@@ -17,4 +17,15 @@ export const keys = {
   rate: {
     magic: (email: string): Deno.KvKey => ["rate", "magic", email],
   },
+  stripe: {
+    byUser: (
+      userId: string,
+    ): Deno.KvKey => ["stripe", "customer", "user", userId],
+    byStripeId: (
+      stripeId: string,
+    ): Deno.KvKey => ["stripe", "customer", "id", stripeId],
+    subscriptionByUser: (
+      userId: string,
+    ): Deno.KvKey => ["stripe", "subscription", "user", userId],
+  },
 };
