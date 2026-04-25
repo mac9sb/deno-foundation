@@ -19,7 +19,7 @@ export type MagicToken = {
 
 export type PasskeyCredential = {
   id: string;
-  publicKey: Uint8Array;
+  publicKey: Uint8Array<ArrayBuffer>;
   counter: number;
   transports?: string[];
 };

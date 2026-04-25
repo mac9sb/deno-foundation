@@ -188,7 +188,7 @@ export async function finishAuthentication(
     requireUserVerification: false,
     credential: {
       id: stored.id,
-      publicKey: stored.publicKey,
+      publicKey: stored.publicKey as Uint8Array<ArrayBuffer>,
       counter: stored.counter,
       transports: stored.transports as
         | AuthenticatorTransportFuture[]
