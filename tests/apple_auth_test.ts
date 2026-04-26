@@ -22,7 +22,12 @@ interface TestKeys {
 
 async function generateTestKeys(): Promise<TestKeys> {
   const { privateKey, publicKey } = await crypto.subtle.generateKey(
-    { name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" },
+    {
+      name: "RSASSA-PKCS1-v1_5",
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: "SHA-256",
+    },
     true,
     ["sign", "verify"],
   );
@@ -38,7 +43,11 @@ async function buildToken(
   const header = encodeJson({ alg: "RS256", kid });
   const body = encodeJson(payload);
   const signingInput = new TextEncoder().encode(`${header}.${body}`);
-  const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", privateKey, signingInput);
+  const sig = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    privateKey,
+    signingInput,
+  );
   return `${header}.${body}.${base64urlEncode(new Uint8Array(sig))}`;
 }
 
@@ -73,7 +82,10 @@ Deno.test("verifyAppleToken returns payload for valid token", async () => {
 
 Deno.test("verifyAppleToken returns null for expired token", async () => {
   const { privateKey, publicJwk } = await generateTestKeys();
-  const payload = { ...validPayload(), exp: Math.floor(Date.now() / 1000) - 10 };
+  const payload = {
+    ...validPayload(),
+    exp: Math.floor(Date.now() / 1000) - 10,
+  };
   const token = await buildToken(privateKey, publicJwk.kid, payload);
   const result = await verifyAppleToken(token, CLIENT_ID, {
     fetch: makeMockFetch([publicJwk]),
@@ -115,7 +127,10 @@ Deno.test("verifyAppleToken returns null for tampered payload", async () => {
   const token = await buildToken(privateKey, publicJwk.kid, validPayload());
   // Swap the payload part with a different email
   const [header, , sig] = token.split(".");
-  const tamperedPayload = encodeJson({ ...validPayload(), email: "attacker@evil.com" });
+  const tamperedPayload = encodeJson({
+    ...validPayload(),
+    email: "attacker@evil.com",
+  });
   const tampered = `${header}.${tamperedPayload}.${sig}`;
   const result = await verifyAppleToken(tampered, CLIENT_ID, {
     fetch: makeMockFetch([publicJwk]),
@@ -125,8 +140,13 @@ Deno.test("verifyAppleToken returns null for tampered payload", async () => {
 
 Deno.test("verifyAppleToken returns payload without email when absent", async () => {
   const { privateKey, publicJwk } = await generateTestKeys();
-  const { email: _e, email_verified: _ev, ...payloadWithoutEmail } = validPayload() as Record<string, unknown>;
-  const token = await buildToken(privateKey, publicJwk.kid, payloadWithoutEmail);
+  const { email: _e, email_verified: _ev, ...payloadWithoutEmail } =
+    validPayload() as Record<string, unknown>;
+  const token = await buildToken(
+    privateKey,
+    publicJwk.kid,
+    payloadWithoutEmail,
+  );
   const result = await verifyAppleToken(token, CLIENT_ID, {
     fetch: makeMockFetch([publicJwk]),
   });

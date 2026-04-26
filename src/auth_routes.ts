@@ -270,7 +270,10 @@ export function mountAuthRoutes(
         } else {
           // Apple sub unknown and no email on this token — cannot link account
           return Response.json(
-            { error: "Unable to identify user — please sign in with email first" },
+            {
+              error:
+                "Unable to identify user — please sign in with email first",
+            },
             { status: 400 },
           );
         }
