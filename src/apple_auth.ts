@@ -12,6 +12,7 @@ interface JWK {
 }
 
 let jwksCache: { keys: JWK[]; fetchedAt: number } | null = null;
+let jwksFlight: Promise<JWK[]> | null = null;
 
 function base64urlDecode(input: string): Uint8Array<ArrayBuffer> {
   const padded = input.replace(/-/g, "+").replace(/_/g, "/").padEnd(
@@ -31,14 +32,25 @@ async function fetchJwks(fetchFn: typeof fetch): Promise<JWK[]> {
   return data.keys;
 }
 
-async function getJwks(fetchFn: typeof fetch): Promise<JWK[]> {
+async function getJwks(
+  fetchFn: typeof fetch,
+  forceRefresh = false,
+): Promise<JWK[]> {
   const now = Date.now();
-  if (jwksCache && now - jwksCache.fetchedAt < JWKS_TTL_MS) {
+  if (!forceRefresh && jwksCache && now - jwksCache.fetchedAt < JWKS_TTL_MS) {
     return jwksCache.keys;
   }
-  const keys = await fetchJwks(fetchFn);
-  jwksCache = { keys, fetchedAt: now };
-  return keys;
+  if (!jwksFlight) {
+    jwksFlight = fetchJwks(fetchFn).then((keys) => {
+      jwksCache = { keys, fetchedAt: Date.now() };
+      jwksFlight = null;
+      return keys;
+    }).catch((err) => {
+      jwksFlight = null;
+      throw err;
+    });
+  }
+  return jwksFlight;
 }
 
 /** Payload returned after successful Apple identity token verification. */
@@ -108,8 +120,7 @@ export async function verifyAppleToken(
 
   // Re-fetch once on unknown kid — Apple may have rotated keys
   if (!jwk) {
-    jwks = await fetchJwks(fetchFn);
-    jwksCache = { keys: jwks, fetchedAt: Date.now() };
+    jwks = await getJwks(fetchFn, true);
     jwk = jwks.find((k) => k.kid === header.kid);
   }
 

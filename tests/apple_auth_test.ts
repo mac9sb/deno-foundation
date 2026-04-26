@@ -161,3 +161,78 @@ Deno.test("verifyAppleToken returns null for malformed JWT", async () => {
   });
   assertEquals(result, null);
 });
+
+Deno.test("verifyAppleToken returns null for non-RS256 algorithm", async () => {
+  const { privateKey, publicJwk } = await generateTestKeys();
+  const header = encodeJson({ alg: "HS256", kid: publicJwk.kid });
+  const body = encodeJson(validPayload());
+  const signingInput = new TextEncoder().encode(`${header}.${body}`);
+  const sig = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    privateKey,
+    signingInput,
+  );
+  const token = `${header}.${body}.${base64urlEncode(new Uint8Array(sig))}`;
+  const result = await verifyAppleToken(token, CLIENT_ID, {
+    fetch: makeMockFetch([publicJwk]),
+  });
+  assertEquals(result, null);
+});
+
+Deno.test("verifyAppleToken handles email_verified as string 'true'", async () => {
+  const { privateKey, publicJwk } = await generateTestKeys();
+  const payload = { ...validPayload(), email_verified: "true" };
+  const token = await buildToken(privateKey, publicJwk.kid, payload);
+  const result = await verifyAppleToken(token, CLIENT_ID, {
+    fetch: makeMockFetch([publicJwk]),
+  });
+  assertNotEquals(result, null);
+  assertEquals(result!.emailVerified, true);
+});
+
+Deno.test("verifyAppleToken re-fetches JWKS on key rotation and succeeds", async () => {
+  const { privateKey, publicJwk } = await generateTestKeys();
+  const token = await buildToken(privateKey, publicJwk.kid, validPayload());
+
+  // The unique kid won't be in the module-level cache from previous tests.
+  // Whether the cache is cold (initial fetch) or warm (re-fetch), the mock is
+  // called exactly once and returns the key — verifying the rotation path succeeds.
+  let callCount = 0;
+  const countingFetch = (
+    ..._args: Parameters<typeof fetch>
+  ): Promise<Response> => {
+    callCount++;
+    return Promise.resolve(Response.json({ keys: [publicJwk] }));
+  };
+
+  const result = await verifyAppleToken(token, CLIENT_ID, {
+    fetch: countingFetch,
+  });
+  assertNotEquals(result, null);
+  assertEquals(result!.sub, "000123.abc.456");
+  assertEquals(callCount, 1);
+});
+
+Deno.test("verifyAppleToken concurrent cold-cache requests share one fetch", async () => {
+  const { privateKey, publicJwk } = await generateTestKeys();
+  const token = await buildToken(privateKey, publicJwk.kid, validPayload());
+
+  let callCount = 0;
+  const slowMockFetch = (_url: string | URL | Request): Promise<Response> => {
+    callCount++;
+    return new Promise((resolve) =>
+      setTimeout(() => resolve(Response.json({ keys: [publicJwk] })), 10)
+    );
+  };
+
+  const [r1, r2, r3] = await Promise.all([
+    verifyAppleToken(token, CLIENT_ID, { fetch: slowMockFetch }),
+    verifyAppleToken(token, CLIENT_ID, { fetch: slowMockFetch }),
+    verifyAppleToken(token, CLIENT_ID, { fetch: slowMockFetch }),
+  ]);
+
+  assertNotEquals(r1, null);
+  assertNotEquals(r2, null);
+  assertNotEquals(r3, null);
+  assertEquals(callCount, 1);
+});
