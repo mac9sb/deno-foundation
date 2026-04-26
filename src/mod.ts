@@ -14,3 +14,4 @@ export * from "./user.ts";
 export * from "./auth_routes.ts";
 export * from "./static.ts";
 export * from "./stripe_routes.ts";
+export * from "./i18n.ts";
