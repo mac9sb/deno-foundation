@@ -1,6 +1,6 @@
 import type { MagicToken } from "./schemas.ts";
 import { keys } from "./kv.ts";
-import { randomToken, sha256Hex } from "./crypto.ts";
+import { sha256Hex } from "./crypto.ts";
 import { enforce } from "./rate_limit.ts";
 import { sendEmail } from "./email.ts";
 
@@ -38,7 +38,7 @@ export async function sendMagicLink(
     if (!result.ok) return { ok: false, retryAfter: result.retryAfter };
   }
 
-  const rawToken = randomToken();
+  const rawToken = crypto.randomUUID();
   const hashedToken = await sha256Hex(rawToken);
   const now = Date.now();
 

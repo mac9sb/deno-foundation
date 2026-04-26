@@ -8,7 +8,6 @@ import {
   verifyWebhook,
 } from "./stripe.ts";
 import { validateSession } from "./session.ts";
-import { errorResponse, jsonResponse } from "./router.ts";
 import type { Router } from "./router.ts";
 import type { User } from "./schemas.ts";
 import { keys } from "./kv.ts";
@@ -50,9 +49,11 @@ export function mountStripeRoutes(
   router.route("/api/subscription", {
     get: async (req) => {
       const session = await validateSession(kv, req);
-      if (!session) return errorResponse("Unauthorized", 401);
+      if (!session) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
       const sub = await getSubscription(kv, session.userId);
-      return jsonResponse({
+      return Response.json({
         subscription: sub,
         active: isActiveSubscription(sub),
       });
@@ -62,13 +63,19 @@ export function mountStripeRoutes(
   router.route("/billing/checkout", {
     post: async (req) => {
       const session = await validateSession(kv, req);
-      if (!session) return errorResponse("Unauthorized", 401);
+      if (!session) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
 
       const body = await req.json().catch(() => ({})) as { priceId?: string };
-      if (!body.priceId) return errorResponse("priceId is required", 400);
+      if (!body.priceId) {
+        return Response.json({ error: "priceId is required" }, { status: 400 });
+      }
 
       const user = (await kv.get<User>(keys.user.byId(session.userId))).value;
-      if (!user) return errorResponse("User not found", 404);
+      if (!user) {
+        return Response.json({ error: "User not found" }, { status: 404 });
+      }
 
       await createOrGetCustomer(kv, user.id, user.email, { secretKey });
       const checkout = await createCheckoutSession(kv, user.id, {
@@ -77,20 +84,22 @@ export function mountStripeRoutes(
         cancelUrl: `${opts.baseUrl}${cancelPath}`,
         secretKey,
       });
-      return jsonResponse({ url: checkout.url });
+      return Response.json({ url: checkout.url });
     },
   });
 
   router.route("/billing/portal", {
     post: async (req) => {
       const session = await validateSession(kv, req);
-      if (!session) return errorResponse("Unauthorized", 401);
+      if (!session) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
 
       const portal = await createPortalSession(kv, session.userId, {
         returnUrl: `${opts.baseUrl}${cancelPath}`,
         secretKey,
       });
-      return jsonResponse({ url: portal.url });
+      return Response.json({ url: portal.url });
     },
   });
 
@@ -100,17 +109,23 @@ export function mountStripeRoutes(
       const signature = req.headers.get("Stripe-Signature") ?? "";
       const secret = webhookSecret ?? "";
 
-      if (!secret) return errorResponse("Webhook secret not configured", 500);
+      if (!secret) {
+        return Response.json({ error: "Webhook secret not configured" }, {
+          status: 500,
+        });
+      }
 
       const valid = await verifyWebhook(payload, signature, secret);
-      if (!valid) return errorResponse("Invalid signature", 400);
+      if (!valid) {
+        return Response.json({ error: "Invalid signature" }, { status: 400 });
+      }
 
       const event = JSON.parse(payload) as {
         type: string;
         data: { object: Record<string, unknown> };
       };
       await handleWebhookEvent(kv, event);
-      return jsonResponse({ received: true });
+      return Response.json({ received: true });
     },
   });
 }

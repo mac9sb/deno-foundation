@@ -12,7 +12,6 @@ import {
 } from "./session.ts";
 import { sendMagicLink, verifyMagicToken } from "./magic_link.ts";
 import { createLogger } from "./logging.ts";
-import { errorResponse, jsonResponse } from "./router.ts";
 import type { Router } from "./router.ts";
 import { findOrCreateUser } from "./user.ts";
 import type { User } from "./schemas.ts";
@@ -61,43 +60,45 @@ export function mountAuthRoutes(
   router.route("/api/session", {
     get: async (req) => {
       const session = await validateSession(kv, req);
-      if (!session) return errorResponse("Unauthorized", 401);
+      if (!session) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
       const user = (await kv.get<User>(keys.user.byId(session.userId))).value;
-      if (!user) return errorResponse("User not found", 404);
-      return jsonResponse({ userId: user.id, email: user.email });
+      if (!user) {
+        return Response.json({ error: "User not found" }, { status: 404 });
+      }
+      return Response.json({ userId: user.id, email: user.email });
     },
   });
 
   router.route("/auth/magic-link", {
     post: async (req) => {
       const body = await req.json().catch(() => ({})) as { email?: string };
-      if (!body.email) return errorResponse("email is required", 400);
+      if (!body.email) {
+        return Response.json({ error: "email is required" }, { status: 400 });
+      }
 
       const result = await sendMagicLink(kv, body.email, {
         baseUrl: opts.baseUrl,
       });
       if (!result.ok) {
-        return new Response(
-          JSON.stringify({
-            error: "Too many requests. Please wait before trying again.",
-          }),
-          {
-            status: 429,
-            headers: {
-              "Content-Type": "application/json",
-              "Retry-After": String(result.retryAfter ?? 60),
-            },
-          },
+        const res = Response.json(
+          { error: "Too many requests. Please wait before trying again." },
+          { status: 429 },
         );
+        res.headers.set("Retry-After", String(result.retryAfter ?? 60));
+        return res;
       }
-      return jsonResponse({ ok: true });
+      return Response.json({ ok: true });
     },
   });
 
   router.route("/auth/verify", {
     get: async (req) => {
       const token = new URL(req.url).searchParams.get("token");
-      if (!token) return errorResponse("token is required", 400);
+      if (!token) {
+        return Response.json({ error: "token is required" }, { status: 400 });
+      }
 
       const result = await verifyMagicToken(kv, token);
       if (!result) {
@@ -121,11 +122,15 @@ export function mountAuthRoutes(
   router.route("/auth/passkey/register/begin", {
     post: async (req) => {
       const session = await validateSession(kv, req);
-      if (!session) return errorResponse("Unauthorized", 401);
+      if (!session) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
       const user = (await kv.get<User>(keys.user.byId(session.userId))).value;
-      if (!user) return errorResponse("User not found", 404);
+      if (!user) {
+        return Response.json({ error: "User not found" }, { status: 404 });
+      }
 
-      return jsonResponse(
+      return Response.json(
         await beginRegistration(kv, {
           rpName: opts.rpName,
           rpId: opts.rpId,
@@ -139,14 +144,19 @@ export function mountAuthRoutes(
   router.route("/auth/passkey/register/finish", {
     post: async (req) => {
       const session = await validateSession(kv, req);
-      if (!session) return errorResponse("Unauthorized", 401);
+      if (!session) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
 
       const body = await req.json().catch(() => ({})) as {
         challengeId?: string;
         response?: unknown;
       };
       if (!body.challengeId || !body.response) {
-        return errorResponse("challengeId and response are required", 400);
+        return Response.json(
+          { error: "challengeId and response are required" },
+          { status: 400 },
+        );
       }
 
       // deno-lint-ignore no-explicit-any
@@ -159,13 +169,13 @@ export function mountAuthRoutes(
         opts.rpId,
         opts.baseUrl,
       );
-      return jsonResponse({ ok: true });
+      return Response.json({ ok: true });
     },
   });
 
   router.route("/auth/passkey/login/begin", {
     post: async () =>
-      jsonResponse(await beginAuthentication(kv, { rpId: opts.rpId })),
+      Response.json(await beginAuthentication(kv, { rpId: opts.rpId })),
   });
 
   router.route("/auth/passkey/login/finish", {
@@ -175,7 +185,10 @@ export function mountAuthRoutes(
         response?: unknown;
       };
       if (!body.challengeId || !body.response) {
-        return errorResponse("challengeId and response are required", 400);
+        return Response.json(
+          { error: "challengeId and response are required" },
+          { status: 400 },
+        );
       }
 
       // deno-lint-ignore no-explicit-any
@@ -190,10 +203,9 @@ export function mountAuthRoutes(
       const { cookie } = await createSession(kv, userId);
       log.info("passkey login", { userId });
 
-      return new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json", "Set-Cookie": cookie },
-      });
+      const res = Response.json({ ok: true });
+      res.headers.set("Set-Cookie", cookie);
+      return res;
     },
   });
 

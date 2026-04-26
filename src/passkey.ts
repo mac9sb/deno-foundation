@@ -13,7 +13,6 @@ import type {
 } from "@simplewebauthn/server";
 import type { PasskeyCredential } from "./schemas.ts";
 import { keys } from "./kv.ts";
-import { randomToken } from "./crypto.ts";
 
 export type {
   AuthenticationResponseJSON,
@@ -63,7 +62,7 @@ export async function beginRegistration(
   kv: Deno.Kv,
   opts: RegistrationBeginOptions,
 ): Promise<RegistrationBeginResult> {
-  const challengeId = randomToken();
+  const challengeId = crypto.randomUUID();
   const existing =
     (await kv.get<PasskeyCredential[]>(keys.passkey.byUser(opts.userId)))
       .value ?? [];
@@ -150,7 +149,7 @@ export async function beginAuthentication(
   kv: Deno.Kv,
   opts: AuthenticationBeginOptions,
 ): Promise<AuthenticationBeginResult> {
-  const challengeId = randomToken();
+  const challengeId = crypto.randomUUID();
 
   let allowCredentials:
     | { id: string; type: "public-key" }[]

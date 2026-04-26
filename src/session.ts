@@ -1,6 +1,5 @@
 import type { Session } from "./schemas.ts";
 import { keys } from "./kv.ts";
-import { randomToken } from "./crypto.ts";
 
 const DEFAULT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -28,7 +27,7 @@ export async function createSession(
   opts: SessionOptions = {},
 ): Promise<CreateSessionResult> {
   const ttlMs = opts.ttlMs ?? DEFAULT_TTL_MS;
-  const id = randomToken();
+  const id = crypto.randomUUID();
   const now = Date.now();
   const session: Session = {
     id,

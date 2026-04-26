@@ -1,8 +1,3 @@
-/** Returns a new random UUID v4 token. */
-export function randomToken(): string {
-  return crypto.randomUUID();
-}
-
 /** Returns the SHA-256 hex digest of the given string. */
 export async function sha256Hex(input: string): Promise<string> {
   const encoded = new TextEncoder().encode(input);

@@ -51,37 +51,20 @@ export class Router {
         const allowed = Object.keys(definition)
           .map((m) => m.toUpperCase())
           .join(", ");
-        return new Response(
-          JSON.stringify({ error: "Method not allowed", allowed }),
-          {
-            status: 405,
-            headers: {
-              "Content-Type": "application/json",
-              "Allow": allowed,
-            },
-          },
+        const res = Response.json(
+          { error: "Method not allowed", allowed },
+          { status: 405 },
         );
+        res.headers.set("Allow", allowed);
+        return res;
       }
 
       return await handler(request, params);
     }
 
-    return new Response(
-      JSON.stringify({ error: "Not found", path: url.pathname }),
-      { status: 404, headers: { "Content-Type": "application/json" } },
+    return Response.json(
+      { error: "Not found", path: url.pathname },
+      { status: 404 },
     );
   }
-}
-
-/** Serialises `data` as JSON and returns a `Response` with the given status. */
-export function jsonResponse(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-/** Returns a JSON error response with `{ error: message }` and the given status. */
-export function errorResponse(message: string, status: number): Response {
-  return jsonResponse({ error: message }, status);
 }

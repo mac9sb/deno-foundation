@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { errorResponse, jsonResponse, Router } from "../src/router.ts";
+import { Router } from "../src/router.ts";
 
 function makeReq(
   method: string,
@@ -62,17 +62,4 @@ Deno.test("Router handles multiple routes in order", async () => {
   const b = await router.handle(makeReq("GET", "/b"));
   assertEquals(await a.text(), "a");
   assertEquals(await b.text(), "b");
-});
-
-Deno.test("jsonResponse sets Content-Type and status", () => {
-  const res = jsonResponse({ x: 1 }, 201);
-  assertEquals(res.status, 201);
-  assertEquals(res.headers.get("Content-Type"), "application/json");
-});
-
-Deno.test("errorResponse wraps message in error field", async () => {
-  const res = errorResponse("something went wrong", 400);
-  assertEquals(res.status, 400);
-  const body = await res.json();
-  assertEquals(body.error, "something went wrong");
 });
