@@ -32,13 +32,10 @@ async function fetchJwks(fetchFn: typeof fetch): Promise<JWK[]> {
   return data.keys;
 }
 
-async function getJwks(
-  fetchFn: typeof fetch,
-  forceRefresh = false,
-): Promise<JWK[]> {
+function getJwks(fetchFn: typeof fetch, forceRefresh = false): Promise<JWK[]> {
   const now = Date.now();
   if (!forceRefresh && jwksCache && now - jwksCache.fetchedAt < JWKS_TTL_MS) {
-    return jwksCache.keys;
+    return Promise.resolve(jwksCache.keys);
   }
   if (!jwksFlight) {
     jwksFlight = fetchJwks(fetchFn).then((keys) => {
