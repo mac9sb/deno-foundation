@@ -15,3 +15,4 @@ export * from "./auth_routes.ts";
 export * from "./static.ts";
 export * from "./stripe_routes.ts";
 export * from "./i18n.ts";
+export * from "./apple_auth.ts";

@@ -5,6 +5,8 @@ export const keys = {
     byId: (id: string): Deno.KvKey => ["user", "id", id],
     /** Key for a user ID looked up by email address. */
     byEmail: (email: string): Deno.KvKey => ["user", "email", email],
+    /** Key for the application user ID looked up by Apple subject identifier. */
+    byAppleSub: (sub: string): Deno.KvKey => ["user", "apple", sub],
   },
   /** Key for a session record looked up by session ID. */
   session: (id: string): Deno.KvKey => ["session", id],

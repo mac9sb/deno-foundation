@@ -1,6 +1,6 @@
 {
   "name": "@mac9sb/deno-foundation",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "license": "MIT",
   "exports": "./src/mod.ts",
   "publish": {

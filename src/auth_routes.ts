@@ -11,6 +11,7 @@ import {
   validateSession,
 } from "./session.ts";
 import { sendMagicLink, verifyMagicToken } from "./magic_link.ts";
+import { verifyAppleToken } from "./apple_auth.ts";
 import { createLogger } from "./logging.ts";
 import type { Router } from "./router.ts";
 import { findOrCreateUser } from "./user.ts";
@@ -27,6 +28,11 @@ export interface AuthRoutesOptions {
   rpId: string;
   /** Human-readable name shown to users during passkey registration. */
   rpName: string;
+  /**
+   * Apple bundle ID or Services ID for Sign in with Apple.
+   * When set, mounts `POST /auth/apple`.
+   */
+  appleClientId?: string;
   /** Path to redirect to after sign-in. Default: `/auth/success`. */
   successPath?: string;
   /** Path to redirect to after sign-out. Default: `/get-started`. */
@@ -222,4 +228,60 @@ export function mountAuthRoutes(
       });
     },
   });
+
+  if (opts.appleClientId) {
+    const appleClientId = opts.appleClientId;
+    router.route("/auth/apple", {
+      post: async (req) => {
+        const body = await req.json().catch(() => ({})) as {
+          identityToken?: string;
+        };
+        if (!body.identityToken) {
+          return Response.json(
+            { error: "identityToken is required" },
+            { status: 400 },
+          );
+        }
+
+        const payload = await verifyAppleToken(
+          body.identityToken,
+          appleClientId,
+        );
+        if (!payload) {
+          return Response.json(
+            { error: "Invalid or expired identity token" },
+            { status: 401 },
+          );
+        }
+
+        // Look up existing Apple-linked user
+        const existingEntry = await kv.get<string>(
+          keys.user.byAppleSub(payload.sub),
+        );
+        let userId: string;
+
+        if (existingEntry.value) {
+          userId = existingEntry.value;
+        } else if (payload.email) {
+          // First sign-in — Apple provides the email
+          const user = await findOrCreateUser(kv, payload.email);
+          userId = user.id;
+          await kv.set(keys.user.byAppleSub(payload.sub), userId);
+        } else {
+          // Apple sub unknown and no email on this token — cannot link account
+          return Response.json(
+            { error: "Unable to identify user — please sign in with email first" },
+            { status: 400 },
+          );
+        }
+
+        const { cookie } = await createSession(kv, userId);
+        log.info("apple sign-in", { userId });
+
+        const res = Response.json({ ok: true });
+        res.headers.set("Set-Cookie", cookie);
+        return res;
+      },
+    });
+  }
 }

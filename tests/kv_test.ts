@@ -36,3 +36,11 @@ Deno.test("keys.passkey.credentialToUser builds correct key", () => {
 Deno.test("keys.rate.magic builds correct key", () => {
   assertEquals(keys.rate.magic("a@b.com"), ["rate", "magic", "a@b.com"]);
 });
+
+Deno.test("keys.user.byAppleSub builds correct key", () => {
+  assertEquals(keys.user.byAppleSub("apple-sub-123"), [
+    "user",
+    "apple",
+    "apple-sub-123",
+  ]);
+});
